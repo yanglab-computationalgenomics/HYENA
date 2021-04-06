@@ -194,6 +194,12 @@ if(opt$age | opt$sex) {
   head(clindat)
 }
 
+# Transform expression data to normal scores
+ns_transform <- function (y) {
+  y <- qqnorm(y, plot.it = FALSE)$x
+}
+
+fpkm.uq.qn.t <- apply(fpkm.uq.qn.t, 2, ns_transform)
 
 # Perform  PCA using prcomp() ####
 pca.prcomp <- prcomp(fpkm.uq.qn.t, center = TRUE, scale. = TRUE)
