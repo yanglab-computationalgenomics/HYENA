@@ -28,6 +28,7 @@ class(dat.expression) <- "numeric"
 
 # remove genes that are 0 for all patients
 dat.expression <- dat.expression[rowSums(dat.expression[]) > 0 ,]
+dat.expression[1:5,1:5]
 
 # add noise to the entire expression matrix
 dat.expression.noisy <- add.Gaussian.noise(as.matrix(dat.expression),
