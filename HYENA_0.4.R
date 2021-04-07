@@ -193,7 +193,11 @@ ns_transform <- function (y) {
   y <- qqnorm(y, plot.it = FALSE)$x
 }
 
+temp <- rownames(fpkm.uq.qn.t)
 fpkm.uq.qn.t <- apply(fpkm.uq.qn.t, 2, ns_transform)
+rownames(fpkm.uq.qn.t) <- temp
+print("PCA input:")
+fpkm.uq.qn.t[1:5,1:5]
 
 # Perform  PCA using prcomp() ####
 pca.prcomp <- prcomp(fpkm.uq.qn.t, center = FALSE, scale. = FALSE)
