@@ -7,9 +7,7 @@ library(stats)
 library(MatrixGenerics)
 
 
-option_list <- list( 
-  make_option(c("-e", "--exprs"), action="store", default="exprs.txt",
-              help="FPKM-UQ expression data file [default %default] to be used as the input"),
+option_list <- list(
   make_option(c("-q", "--qnormexprs"), action="store", default="qnorm_exprs.txt",
               help="Quantile normalized FPKM-UQ expression data file [default %default] to be used as the input"),
   make_option(c("-s", "--sv"), action="store", default= "sv_mapped.txt", 
@@ -54,10 +52,6 @@ setwd(opt$dir)
 getwd()
 
 # Load the input expression, SV, purity, CNA, and patient data ####
-fpkm.uq <- fread(opt$exprs, stringsAsFactors = FALSE)
-print("fpkm-uq loaded:")
-fpkm.uq[1:5,1:5]
-
 fpkm.uq.qn <- fread(opt$qnormexprs, stringsAsFactors = FALSE)
 fpkm.uq.qn <- as.matrix(fpkm.uq.qn)
 print("fpkm-uq-qn loaded:")
