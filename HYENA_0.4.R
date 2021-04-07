@@ -94,7 +94,7 @@ rownames(fpkm.uq.qn) <- fpkm.uq.qn[,1]
 fpkm.uq.qn <- fpkm.uq.qn[,-1]
 class(fpkm.uq.qn) <- "numeric"
 
-# remove genes that are 0 for all patients
+# remove genes that are 0 for all patients (this line is potentially obsolete thanks to 'add_noise.R')
 fpkm.uq.qn <- fpkm.uq.qn[rowSums(fpkm.uq.qn[]) > 0 ,]
 
 # transpose the expression matrix so that the variable (genes) are in columns
