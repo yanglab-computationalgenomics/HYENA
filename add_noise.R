@@ -39,4 +39,4 @@ dat.expression.noisy[1:5,1:5]
 
 # write noisy expression data as output
 outputName <- opt$output
-write.table(dat.expression.noisy, outputName, sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(dat.expression.noisy, outputName, sep = "\t", quote = FALSE, row.names = TRUE)
