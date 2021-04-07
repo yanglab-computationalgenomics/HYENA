@@ -17,6 +17,7 @@ opt <- args$options
 
 # load expression data
 dat.expression <- fread(opt$exprs, stringsAsFactors = FALSE)
+dat.expression <- as.matrix(dat.expression)
 print("expression data loaded:")
 dat.expression[1:5,1:5]
 
