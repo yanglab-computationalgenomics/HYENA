@@ -1,13 +1,40 @@
+library(optparse)
 library(data.table)
 library(RMThreshold)
 
-dat.expression <- fread("fpkm_uq_purityCorr_cnCorr.txt", stringsAsFactors = FALSE)
-#dat.expression <- na.omit(dat.expression)
-dat.expression.noisy <- add.Gaussian.noise(as.matrix(dat.expression[,3:ncol(dat.expression)]),
+option_list <- list( 
+  make_option(c("-e", "--exprs"), action="store", default="exprs.txt",
+              help="Expression data file [default %default] to be used as the input"),
+  make_option(c("-w", "--write"), action="store", default= getwd(), 
+              help="Output directory"),
+  make_option(c("-o", "--output"), action="store", default="exprs_noisy.txt",
+              help="Output file name [default %default]")
+)
+
+parser <- OptionParser(usage="%prog [options]", option_list=option_list, description="")
+args <- parse_args(parser, positional_arguments=0)
+opt <- args$options
+
+# load expression data
+dat.expression <- fread(opt$exprs, stringsAsFactors = FALSE)
+print("expression data loaded:")
+dat.expression[1:5,1:5]
+
+# annotate rows
+rownames(dat.expression) <- dat.expression[,1]
+dat.expression <- dat.expression[,-1]
+class(dat.expression) <- "numeric"
+
+# remove genes that are 0 for all patients
+dat.expression <- dat.expression[rowSums(dat.expression[]) > 0 ,]
+
+# add noise to the entire expression matrix
+dat.expression.noisy <- add.Gaussian.noise(as.matrix(dat.expression),
                                            mean = 0.000000001,
                                            stddev = 0.000000001,
                                            symm = FALSE)
 dat.expression.noisy <- as.data.frame(dat.expression.noisy)
-dat.expression.noisy <- cbind(dat.expression[,1:2], dat.expression.noisy)
 
-write.table(dat.expression.noisy, "fpkm_uq_purityCorr_cnCorr_noisy.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+# write noisy expression data as output
+outputName <- opt$output
+write.table(dat.expression.noisy, outputName, sep = "\t", quote = FALSE, row.names = FALSE)
