@@ -35,6 +35,7 @@ dat.expression.noisy <- add.Gaussian.noise(as.matrix(dat.expression),
                                            stddev = 0.000000001,
                                            symm = FALSE)
 dat.expression.noisy <- as.data.frame(dat.expression.noisy)
+dat.expression.noisy[1:5,1:5]
 
 # write noisy expression data as output
 outputName <- opt$output
