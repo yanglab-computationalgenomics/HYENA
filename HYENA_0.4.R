@@ -196,7 +196,7 @@ ns_transform <- function (y) {
 fpkm.uq.qn.t <- apply(fpkm.uq.qn.t, 2, ns_transform)
 
 # Perform  PCA using prcomp() ####
-pca.prcomp <- prcomp(fpkm.uq.qn.t, center = TRUE, scale. = TRUE)
+pca.prcomp <- prcomp(fpkm.uq.qn.t, center = FALSE, scale. = FALSE)
 var_explained <- (pca.prcomp$sdev^2/sum(pca.prcomp$sdev^2))*100
 
 pdf("var_explained.pdf")
@@ -297,8 +297,6 @@ for (i in 1:ncol(dat.svmapped)) {
     n <- opt$npc # number of first n PCs to be included in the linear model
     test.mat <- cbind(test.mat, pca.ind.temp[,1:n])
   }
-  
-  test.mat$expression <- scale(test.mat$expression, center = TRUE, scale = TRUE)
   
   test.mat2 <- na.omit(test.mat) # remove all rows with NA
   test.mat2 <- test.mat2[test.mat2$expression != "Inf",] # remove patients with Inf
