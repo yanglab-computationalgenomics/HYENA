@@ -132,6 +132,8 @@ dat.svmapped <- dat.svmapped[-c(1, nrow(dat.svmapped)-1, nrow(dat.svmapped)),] #
 aliqid_wgs <- samples$aliquot_id_wgs
 aliqid_rnaseq <- samples$aliquot_id_rnaseq
 
+fpkm.uq.qn.t <- fpkm.uq.qn.t[match(aliqid_rnaseq, rownames(fpkm.uq.qn.t)),]
+
 dat.svmapped <- dat.svmapped[match(aliqid_wgs, rownames(dat.svmapped)),]
 dat.svmapped <- data.frame(dat.svmapped, stringsAsFactors = FALSE)
 
