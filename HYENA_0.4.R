@@ -276,10 +276,12 @@ for (i in 1:ncol(dat.svmapped)) {
   }
   
   if(opt$cn) {
-    cn <- as.numeric(as.character(cna[,gene_id]))
-    if(!is.na(sum(cn))) { # do not include cn in the model if all "NA"s
-      if (length(levels(as.factor(cn)) >= 2)) {
-        test.mat$cn <- as.numeric(as.character(cn))
+    if(gene_id %in% colnames(cna)) {
+      cn <- as.numeric(as.character(cna[,gene_id]))
+      if(!is.na(sum(cn))) { # do not include cn in the model if all "NA"s
+        if (length(levels(as.factor(cn)) >= 2)) {
+          test.mat$cn <- as.numeric(as.character(cn))
+        }
       }
     }
   }
