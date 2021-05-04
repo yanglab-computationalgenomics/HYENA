@@ -36,6 +36,8 @@ option_list <- list(
               help="Include age in the linear model"),
   make_option(c("--sex"), action="store_true", default=FALSE,
               help="Include sex in the linear model"),
+  make_option(c("--type"), action="store_true", default=FALSE,
+              help="Include cancer type in the linear model"),
   make_option(c("--PC"), action="store_true", default=FALSE,
               help="Include principal components in the linear model"),
   make_option(c("-f", "--fcutoff"), action="store", type="integer", default= 5, 
@@ -81,10 +83,10 @@ if(opt$cn) {
   cna[1:5,1:5] 
 }
 
-if(opt$age | opt$sex) {
+if(opt$age | opt$sex | opt$type) {
   clindat <- fread(opt$clinical, stringsAsFactors = FALSE)
   print("clindat loaded:")
-  clindat[1:5,1:10]
+  head(clindat)
 }
 
 
@@ -181,9 +183,9 @@ if(opt$cn) {
 }
 
 # Prepare the Clinical data ####
-if(opt$age | opt$sex) {
+if(opt$age | opt$sex | opt$type) {
   clindat <- subset(clindat, select = c(donor_unique_id, project_code, icgc_donor_id, submitted_donor_id, tcga_donor_uuid,
-                                        donor_sex, donor_age_at_diagnosis))
+                                        donor_sex, donor_age_at_diagnosis, cancer_type))
   clindat <- merge(clindat, samples, by.x = "tcga_donor_uuid", by.y = "submitter_donor_id")
   clindat <- clindat[match(aliqid_wgs, clindat$aliquot_id_wgs),]
   print("clindat processed:")
@@ -300,6 +302,12 @@ for (i in 1:ncol(dat.svmapped)) {
     }
   }
   
+  if(opt$type) {
+    cancer_type <- clindat$cancer_type
+    if(length(levels(as.factor(cancer_type))) >= 2) {
+      test.mat$cance_type<- cancer_type
+    }
+  }
   
   if(opt$PC) {
     n <- opt$npc # number of first n PCs to be included in the linear model
