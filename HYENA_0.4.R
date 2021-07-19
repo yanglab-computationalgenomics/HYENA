@@ -5,6 +5,7 @@ library(data.table)
 library(stringr)
 library(stats)
 library(MatrixGenerics)
+library(ggplot2)
 
 
 option_list <- list(
@@ -43,7 +44,9 @@ option_list <- list(
   make_option(c("-f", "--fcutoff"), action="store", type="integer", default= 5, 
               help="SV Frequncy (%) cut-off [default %default]"),
   make_option(c("-C", "--cncutoff"), action="store", type="integer", default= 8, 
-            help="Copy number cut-off for each gene [default %default]")
+            help="Copy number cut-off for each gene [default %default]"),
+  make_option(c("-g", "--genes"), action="store", default=FALSE,
+              help="A list of genes of interest to plot")
 )
 
 parser <- OptionParser(usage="%prog [options]", option_list=option_list, description="")
@@ -62,6 +65,8 @@ fpkm.uq.qn[1:5,1:5]
 dat.svmapped <- fread(opt$sv, stringsAsFactors = FALSE)
 print("dat.svmapped loaded:")
 dat.svmapped[1:5,1:5]
+print("dat.svmapped column names:")
+print(colnames(dat.svmapped))
 
 samples <- fread(opt$id)
 print("samples loaded:")
@@ -89,6 +94,11 @@ if(opt$age | opt$sex | opt$type) {
   head(clindat)
 }
 
+if(opt$genes != FALSE) {
+  goi <- read.table(opt$genes, quote="\"", comment.char="")
+  goi <- goi$V1
+}
+
 
 # Prepare and QC the expression data ####
 # annotate rows
@@ -98,6 +108,8 @@ class(fpkm.uq.qn) <- "numeric"
 
 # remove genes that are 0 for all patients (this line is potentially obsolete thanks to 'add_noise.R')
 fpkm.uq.qn <- fpkm.uq.qn[rowSums(fpkm.uq.qn[]) > 0 ,]
+print("fpkm-uq-qn:")
+fpkm.uq.qn[1:5,1:5]
 
 # transpose the expression matrix so that the variable (genes) are in columns
 fpkm.uq.qn.t <- t(fpkm.uq.qn)
@@ -110,25 +122,40 @@ fpkm.uq.qn.log <- as.matrix(fpkm.uq.qn.log)
 features_meds <- rowMedians(fpkm.uq.qn.log)
 med_devs <- fpkm.uq.qn.log - features_meds
 print("RLE values calculated:")
-med_devs[1:5,1:5]
+#med_devs[1:5,1:5]
 
-# plot RLE
-pdf("rle.pdf")
-print(boxplot(med_devs, 
-              outline=FALSE, 
-              xaxt = "n", 
-              xlab = paste0("Samples(", ncol(med_devs) ,")"), 
-              ylab = "relative log expression", 
-              main = "RLE plot"))
-dev.off()
+# # plot RLE
+# pdf("rle.pdf")
+# print(boxplot(med_devs, 
+#               outline=FALSE, 
+#               xaxt = "n", 
+#               xlab = paste0("Samples(", ncol(med_devs) ,")"), 
+#               ylab = "relative log expression", 
+#               main = "RLE plot"))
+# dev.off()
+
+med_devs <- t(med_devs) # necessary for downstream analysis (plotting)
+
+
+# FPKM-UQ-QN-Z
+fpkm.uq.qn.t.z <- scale(fpkm.uq.qn.t, scale = TRUE, center = TRUE)
+
 
 
 # Prepare the SV data ####
 print("dat.svmapped is being processed...")
 # prep and transpose the data
 dat.svmapped <- t(dat.svmapped) # transpose
+print("dat.svmapped transposed...")
+print(dat.svmapped[1:10,1:10])
+
 colnames(dat.svmapped) <- dat.svmapped[1,] # make the ENSG names the column names
-dat.svmapped <- dat.svmapped[-c(1, nrow(dat.svmapped)-1, nrow(dat.svmapped)),] # remove first and last two rows
+dat.svmapped <- dat.svmapped[-1,] # remove first and last two rows
+print("dat.svmapped column names fixed...")
+print(dat.svmapped[1:10,1:10])
+
+print("SV data dimensions before aliquot id filter:")
+dim(dat.svmapped)
 
 # match the order of rows in dat.svmapped to the order of samples in dat.expression according to the samples table
 aliqid_wgs <- samples$aliquot_id_wgs
@@ -137,14 +164,26 @@ aliqid_rnaseq <- samples$aliquot_id_rnaseq
 fpkm.uq.qn.t <- fpkm.uq.qn.t[match(aliqid_rnaseq, rownames(fpkm.uq.qn.t)),]
 
 dat.svmapped <- dat.svmapped[match(aliqid_wgs, rownames(dat.svmapped)),]
-dat.svmapped <- data.frame(dat.svmapped, stringsAsFactors = FALSE)
+print("dat.svmapped aliquot ids matched:")
+print(dat.svmapped[1:10,1:10])
+
+dat.svmapped <- as.data.frame(dat.svmapped, stringsAsFactors = FALSE)
+rownames(dat.svmapped) <- gsub("X", "", rownames(dat.svmapped))
+rownames(dat.svmapped) <- gsub("\\.", "-", rownames(dat.svmapped))
+print("dat.svmapped saved as data.frame:")
+print(dat.svmapped[1:10,1:10])
+
+print("SV data dimensions after aliquot id filter:")
+dim(dat.svmapped)
 
 # only keep the genes that have expression values
 genes <- colnames(dat.svmapped)
 keep <- genes[genes %in% rownames(fpkm.uq.qn)]
 dat.svmapped <- dat.svmapped[,keep]
 
+print("SV data dimensions after gene expression filter:")
 dim(dat.svmapped)
+print("SV data:")
 dat.svmapped[1:5,1:5]
 
 # remove genes that have only single factor level for sv_status 
@@ -157,6 +196,8 @@ check.levels <- function(x) {
 keep <- apply(dat.svmapped, 2, check.levels)
 dat.svmapped <- dat.svmapped[,keep]
 
+print("SV data dimensions after SV status filter:")
+dim(dat.svmapped)
 print("dat.svmapped processed:")
 print(dat.svmapped[1:5,1:5])
 
@@ -181,6 +222,7 @@ if(opt$cn) {
   print("cna processed:")
   cna[1:5,1:5]
 }
+write.table(cna, "cna_processed.txt", quote = FALSE, sep = "\t")
 
 # Prepare the Clinical data ####
 if(opt$age | opt$sex | opt$type) {
@@ -198,13 +240,13 @@ ns_transform <- function (y) {
 }
 
 temp <- rownames(fpkm.uq.qn.t)
-fpkm.uq.qn.t <- apply(fpkm.uq.qn.t, 2, ns_transform)
-rownames(fpkm.uq.qn.t) <- temp
+fpkm.uq.qn.t.ns <- apply(fpkm.uq.qn.t, 2, ns_transform)
+rownames(fpkm.uq.qn.t.ns) <- temp
 print("PCA input:")
-fpkm.uq.qn.t[1:5,1:5]
+fpkm.uq.qn.t.ns[1:5,1:5]
 
 # Perform  PCA using prcomp() ####
-pca.prcomp <- prcomp(fpkm.uq.qn.t, center = FALSE, scale. = FALSE)
+pca.prcomp <- prcomp(fpkm.uq.qn.t.ns, center = FALSE, scale. = FALSE)
 var_explained <- (pca.prcomp$sdev^2/sum(pca.prcomp$sdev^2))*100
 
 pdf("var_explained.pdf")
@@ -230,6 +272,9 @@ print("PCA analysis completed!")
 
 
 # Test PCs against the SV variable and remove PCs that correlate with SV status based on two-sided ranksum test ####
+setwd(opt$write)
+print(getwd())
+
 Gene <- c()
 Freq <- c()
 Ratio <- c()
@@ -238,8 +283,14 @@ StdError <- c()
 t <- c()
 pvalue <- c()
 
-for (i in 1:ncol(dat.svmapped)) {
-  gene_id <- colnames(dat.svmapped)[i]
+if(opt$genes != FALSE) {
+  genelist <- goi
+} else {
+  genelist <- colnames(dat.svmapped)
+}
+
+for (i in 1:length(genelist)) {
+  gene_id <- genelist[i]
   print(paste0("Testing gene ", gene_id, ": i = ", i))
   
   sv_status <- dat.svmapped[,gene_id]
@@ -264,11 +315,12 @@ for (i in 1:ncol(dat.svmapped)) {
   
   
   # Perform generalized linear model while correcting for principal components ####
-  test.mat <- cbind(fpkm.uq.qn.t[,gene_id], sv_status)
+  test.mat <- cbind(fpkm.uq.qn.t.ns[,gene_id], sv_status)
   test.mat <- as.data.frame(test.mat)
   colnames(test.mat)[1] <- "expression"
   test.mat$expression <- as.numeric(as.character(test.mat$expression))
-  
+  print("Initial testing matrix:")
+  print(head(test.mat))
   
   if(opt$pur) {
     pur <- purity$purity
@@ -276,17 +328,23 @@ for (i in 1:ncol(dat.svmapped)) {
       test.mat$pur <- as.numeric(as.character(pur))
     }
   }
+  print("Purity added to the testing matrix:")
+  print(head(test.mat))
   
   if(opt$cn) {
     if(gene_id %in% colnames(cna)) {
       cn <- as.numeric(as.character(cna[,gene_id]))
-      if(!is.na(sum(cn))) { # do not include cn in the model if all "NA"s
-        if (length(levels(as.factor(cn)) >= 2)) {
-          test.mat$cn <- as.numeric(as.character(cn))
+      print(cn)
+      if(!is.na(sum(cn, na.rm = TRUE))) { # do not include cn in the model if all "NA"s
+        print(paste0("Number of levels more than 2? ", (length(levels(as.factor(cn))) >= 2)))
+        if (length(levels(as.factor(cn))) >= 2) {
+          test.mat$cn <- cn
         }
       }
     }
   }
+  print("Copy number added to the testing matrix:")
+  print(head(test.mat))
   
   if(opt$age) {
     age <- as.numeric(as.character(clindat$donor_age_at_diagnosis))
@@ -294,6 +352,8 @@ for (i in 1:ncol(dat.svmapped)) {
       test.mat$age <- as.numeric(as.character(age))
     }
   }
+  print("Age added to the testing matrix:")
+  print(head(test.mat))
   
   if(opt$sex) {
     sex <- clindat$donor_sex
@@ -301,22 +361,33 @@ for (i in 1:ncol(dat.svmapped)) {
       test.mat$sex<- sex
     }
   }
+  print("Sex added to the testing matrix:")
+  print(head(test.mat))
   
   if(opt$type) {
     cancer_type <- clindat$cancer_type
     if(length(levels(as.factor(cancer_type))) >= 2) {
-      test.mat$cance_type<- cancer_type
+      test.mat$cancer_type<- cancer_type
     }
   }
+  print("Cancer type added to the testing matrix:")
+  print(head(test.mat))
   
   if(opt$PC) {
     n <- opt$npc # number of first n PCs to be included in the linear model
     test.mat <- cbind(test.mat, pca.ind.temp[,1:n])
   }
+  print("PCs added to the testing matrix:")
+  print(head(test.mat))
   
+  print("Dimensions of the testing matrix before NA removal:")
+  print(dim(test.mat))
+  print(test.mat)
+
   test.mat2 <- na.omit(test.mat) # remove all rows with NA
   test.mat2 <- test.mat2[test.mat2$expression != "Inf",] # remove patients with Inf
-  print(test.mat2)
+  print("Dimensions of the testing matrix after NA removal:")
+  print(dim(test.mat2))
   
   if(table(test.mat2$sv_status)[1] >= (nrow(test.mat2)-2)){
     next
@@ -325,7 +396,9 @@ for (i in 1:ncol(dat.svmapped)) {
   if(table(test.mat2$sv_status)[1] == 0){
     next
   } # if all samples are sv, no comparison can be made
-  
+  print("Dimensions of the testing matrix after recurrence filter:")
+  print(dim(test.mat2))
+
   # Apply CN cutoff
   if(opt$cn) {
     if("cn" %in% colnames(test.mat2)){
@@ -334,6 +407,8 @@ for (i in 1:ncol(dat.svmapped)) {
       }
     }
   }
+  print("Dimensions of the testing matrix after high CN filter:")
+  print(dim(test.mat2))
 
   # If all samples are same sex after sample trimming, remove the sex column from matrix
   if(opt$sex) {
@@ -342,6 +417,7 @@ for (i in 1:ncol(dat.svmapped)) {
     }
   }
 
+  print("Processed testing matrix:")
   print(test.mat2)
 
   # Calculate sv ratio and frequency
@@ -361,12 +437,14 @@ for (i in 1:ncol(dat.svmapped)) {
   # Apply frequncy cutoff for sv (set by the user)
   if(opt$fcutoff) {
     if(freq < opt$fcutoff){
+      print("Frequncy less than the user-set threshold!")
       next
     }
   }
   
   # Apply frequency cutoff for no_sv (set to 10%)
   if(freq2 < 10){
+    print("no_sv frequncy less than 10% !")
     next
   }
   
@@ -377,10 +455,6 @@ for (i in 1:ncol(dat.svmapped)) {
   print(summary)
   
   #extract the pval for sv_status
-  Ratio <- c(Ratio, ratio)
-  Freq <- c(Freq, freq)
-  print(paste0("SV ratio and percent frequency for gene ", gene_id, ": ", ratio, ", ", freq, "%"))
-  
   estimate <- summary$coefficients[rownames(summary$coefficients) == "sv_statussv", 1]
   error <- summary$coefficients[rownames(summary$coefficients) == "sv_statussv", 2]
   tval <-  summary$coefficients[rownames(summary$coefficients) == "sv_statussv", 3]
@@ -391,6 +465,159 @@ for (i in 1:ncol(dat.svmapped)) {
   print(paste0("Extracted tval: ", tval))
   print(paste0("Extracted pval: ", pval))
   
+  if(as.character(pval) == "NaN") {
+    print("p-value is NaN. Too few samples after filtering?")
+    next
+  }
+
+
+  # print plotting matrix
+  colnames(test.mat2)[1] <- "fpkm.qn.ns"
+  test.mat2$sample_id <- rownames(test.mat2)
+  plot.mat <- test.mat2
+  
+  temp <- fpkm.uq.qn.t[,gene_id]
+  temp <- cbind(names(temp), temp)
+  colnames(temp) <- c("sample_id", "fpkm.qn")
+  temp <- as.data.frame(temp)
+  class(temp[,2]) <- "numeric"
+  plot.mat <- merge(plot.mat, temp, by = "sample_id", all.x = TRUE)
+
+  temp <- fpkm.uq.qn.t.z[,gene_id]
+  temp <- cbind(names(temp), temp)
+  colnames(temp) <- c("sample_id", "fpkm.qn.z")
+  temp <- as.data.frame(temp)
+  class(temp[,2]) <- "numeric"
+  plot.mat <- merge(plot.mat, temp, by = "sample_id", all.x = TRUE)
+  
+  temp <- med_devs[,gene_id]
+  temp <- cbind(names(temp), temp)
+  colnames(temp) <- c("sample_id", "fpkm.qn.rle")
+  temp <- as.data.frame(temp)
+  class(temp[,2]) <- "numeric"
+  plot.mat <- merge(plot.mat, temp, by = "sample_id", all.x = TRUE)
+  
+  write.table(plot.mat, paste0(gene_id,"_mat2.txt"), quote = FALSE, sep = "\t", row.names = FALSE)
+
+  if(opt$type) {
+    if((pval/2) <= 0.05) {
+
+      # p1 <- ggplot(plot.mat, aes(x=sv_status, y=fpkm.qn.ns)) +
+      #   geom_boxplot(alpha = 0.3, outlier.shape = NA, show.legend = FALSE) +
+      #   geom_jitter(aes(colour = cancer_type),shape=16, position=position_jitter(0.2)) +
+      #   theme_minimal() +
+      #   labs(title = gene_id,
+      #        subtitle = "Gene expression",
+      #        x = "sv status",
+      #        y = "FPKM-QN-NS",
+      #        colour = "cancer type")
+      
+      # p2 <- ggplot(plot.mat, aes(x=sv_status, y=fpkm.qn)) +
+      #   geom_boxplot(alpha = 0.3, outlier.shape = NA, show.legend = FALSE) +
+      #   geom_jitter(aes(colour = cancer_type),shape=16, position=position_jitter(0.2)) +
+      #   theme_minimal() +
+      #   labs(title = gene_id,
+      #        subtitle = "Gene expression",
+      #        x = "sv status",
+      #        y = "FPKM-QN",
+      #        colour = "cancer type")
+      
+      # p3 <- ggplot(plot.mat, aes(x=sv_status, y=fpkm.qn.rle)) +
+      #   geom_boxplot(alpha = 0.3, outlier.shape = NA, show.legend = FALSE) +
+      #   geom_jitter(aes(colour = cancer_type),shape=16, position=position_jitter(0.2)) +
+      #   theme_minimal() +
+      #   labs(title = gene_id,
+      #        subtitle = "Gene expression",
+      #        x = "sv status",
+      #        y = "FPKM-QN-RLE",
+      #        colour = "cancer type")
+      
+      # p4 <- ggplot(plot.mat, aes(x=sv_status, y=fpkm.qn.z)) +
+      #   geom_boxplot(alpha = 0.3, outlier.shape = NA, show.legend = FALSE) +
+      #   geom_jitter(aes(colour = cancer_type),shape=16, position=position_jitter(0.2) ) +
+      #   theme_minimal() +
+      #   labs(title = gene_id,
+      #        subtitle = "Gene expression",
+      #        x = "sv status",
+      #        y = "FPKM-QN-Z",
+      #        colour = "cancer type")
+
+
+      # grouped by cancer type  
+      p5 <- ggplot(plot.mat, aes(x = cancer_type, y = fpkm.qn)) +
+      geom_boxplot(
+        aes(fill = sv_status), width = 0.7, size = 0.3,
+        position = position_dodge(0.8), outlier.shape = NA,
+      ) +
+      geom_jitter(
+        aes(fill = sv_status,color = sv_status), 
+        position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
+        color = "black",
+        size = 0.6
+      ) + 
+      scale_fill_manual(values = c("#999999", "#E69F00")) +
+      theme_classic() +
+      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+      labs(title = gene_id,
+           subtitle = "Gene expression",
+           x = "cancer type",
+           y = "FPKM-QN",
+           colour = "sv status")
+
+      # grouped by cancer type (normal score)
+      p6 <- ggplot(plot.mat, aes(x = cancer_type, y = fpkm.qn.ns)) +
+      geom_boxplot(
+        aes(fill = sv_status), width = 0.7, size = 0.3,
+        position = position_dodge(0.8), outlier.shape = NA,
+      ) +
+      geom_jitter(
+        aes(fill = sv_status,color = sv_status), 
+        position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
+        color = "black",
+        size = 0.6
+      ) + 
+      scale_fill_manual(values = c("#999999", "#E69F00")) +
+      theme_classic() +
+      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+      labs(title = gene_id,
+           subtitle = "Gene expression",
+           x = "cancer type",
+           y = "FPKM-QN-NS",
+           colour = "sv status")
+      
+      # pdf(paste0(gene_id,"_fpkm.qn.ns.pdf"), width = 4, height = 6)
+      # print(p1)
+      # dev.off()
+      
+      # pdf(paste0(gene_id,"_fpkm.qn.pdf"), width = 4, height = 6)
+      # print(p2)
+      # dev.off()
+      
+      # pdf(paste0(gene_id,"_fpkm.qn.rle.pdf"), width = 4, height = 6)
+      # print(p3)
+      # dev.off()
+      
+      # pdf(paste0(gene_id,"_fpkm.qn.z.pdf"), width = 4, height = 6)
+      # print(p4)
+      # dev.off()
+
+      pdf(paste0(gene_id,"_fpkm.qn.grouped.pdf"), width = 12, height = 6)
+      print(p5)
+      dev.off()
+
+      pdf(paste0(gene_id,"_fpkm.qn.ns.grouped.pdf"), width = 12, height = 6)
+      print(p6)
+      dev.off()
+    } else {
+      print("p-value > 0.05. Expression will not be plotted.")
+    }
+  }
+
+
+  Ratio <- c(Ratio, ratio)
+  Freq <- c(Freq, freq)
+  print(paste0("SV ratio and percent frequency for gene ", gene_id, ": ", ratio, ", ", freq, "%"))
+
   Gene <- c(Gene, gene_id)
   Estimate <- c(Estimate, estimate)
   StdError <- c(StdError, error)
@@ -420,8 +647,7 @@ print(paste0(i-1, " iterations of the loop have been completed successfully; the
 
 # Compile results into a table ####
 # Make a results table 
-setwd(opt$write)
-getwd()
+
 
 results <- cbind(Gene, Ratio, Freq, Estimate, StdError, t, pvalue)
 results <- as.data.frame(results)
@@ -486,3 +712,8 @@ outputName.negEstimate <- paste0(outputName, "_negEstimate.txt")
 
 write.table(results.posEstimate, outputName.posEstimate, quote = FALSE, sep = "\t", row.names = FALSE)
 write.table(results.negEstimate, outputName.negEstimate, quote = FALSE, sep = "\t", row.names = FALSE)
+
+
+
+
+# Plot graphs
