@@ -383,6 +383,7 @@ for (i in 1:length(genelist)) {
   print("Dimensions of the testing matrix before NA removal:")
   print(dim(test.mat))
   print(test.mat)
+  write.table(test.mat, paste0(gene_id,"_mat1.txt"), sep="\t", quote=FALSE)
 
   test.mat2 <- na.omit(test.mat) # remove all rows with NA
   test.mat2 <- test.mat2[test.mat2$expression != "Inf",] # remove patients with Inf
