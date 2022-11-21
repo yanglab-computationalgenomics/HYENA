@@ -1,0 +1,58 @@
+v.0.5.3
+2022.05.18
+Stable version.
+
+Revised mapsv.R, added 7 parameters to control removal of small intra-chr SVs
+and size cutoff, as well as removal of gene body SVs.
+
+Revised HYENA.R, add_noise.R and pmt_exp.R, moved the normal score calculation 
+and PCA from HYENA.R to add_noise.R. HYENA.R and pmt_exp.R now take Rdata
+output by add_noise.R. This improved the speed dramatically.
+
+Revised HYENA.R, fixed a bug for CNA matching with sample IDs.
+
+Revised HYENA.R to take CNA input with samples as columns and genes as rows. It
+speeds up the file loading.
+
+Revised HYENA.R, fixed a bug that the 1st pc would be included in the regression
+when --PC was used and -n was set to 0. Now if -n 0 is used, no pc will be 
+included regardless of --PC.
+
+Revised HYENA.R, fixed a bug so that the script will not crash if there is only
+one gender in the cohort and sex is included in the regression model.
+
+Revised HYENA.R, added the requirement of both sv group and no_sv group to have
+at least 3 samples.
+
+Revised HYENA.R, moved the gene expression matrices to intermediate folder.
+
+Revised the expr_plotter.R to output expression fold change based on linear 
+regression of log10(fpkm.qn) and draw fpkm-qn plot starting from 0.
+
+Added plotting to example.sh.
+
+Renamed expr_randomizer.R to pmt_exp.R.
+
+Revised HYENA.R, changed option r to t.
+
+Revised empiricalp.R, changed option r to p and pmt.
+
+Some other minor revisions to reduce outputs.
+
+
+
+
+
+v.0.5.2
+2022.03.30
+Added parameters in all scripts to control input and output files and locations.
+Added example for testing purpose. There are bugs in various places.
+
+
+
+
+
+v.0.5.1
+2021.9.16
+Stable version. Not for release, for internal use only. File names and folder 
+names are hard coded.

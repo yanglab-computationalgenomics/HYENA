@@ -1,0 +1,5 @@
+submitter_donor_id	aliquot_id_wgs	aliquot_id_wgs_norm	aliquot_id_rnaseq
+Sample1	Sample1	Sample1	Sample1
+Sample2	Sample2	Sample2	Sample2
+Sample3	Sample3	Sample3	Sample3
+Sample4	Sample4	Sample4	Sample4
