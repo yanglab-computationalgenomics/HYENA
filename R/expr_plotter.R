@@ -128,17 +128,17 @@ for (i in genes) {
              x = "sv status",
              y = "FPKM-QN-RLE")
       
-      pdf(paste0(opt$write, i, "_fpkm.qn.ns.pdf"), width = 4, height = 6)
-      print(p1)
-      dev.off()
+      #pdf(paste0(opt$write, i, "_fpkm.qn.ns.pdf"), width = 4, height = 6)
+      #print(p1)
+      #dev.off()
       
       pdf(paste0(opt$write, i, "_fpkm.qn.pdf"), width = 4, height = 6)
       print(p2)
       dev.off()
       
-      pdf(paste0(opt$write, i, "_fpkm.qn.rle.pdf"), width = 4, height = 6)
-      print(p3)
-      dev.off()
+      #pdf(paste0(opt$write, i, "_fpkm.qn.rle.pdf"), width = 4, height = 6)
+      #print(p3)
+      #dev.off()
       
       #if (median(mat[mat$sv_status == "no_sv"][,fpkm.qn]) == 0)
       #{

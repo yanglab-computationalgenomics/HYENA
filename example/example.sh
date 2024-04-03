@@ -16,74 +16,74 @@ Rscript ../R/quantNorm.R \
 -w ./intermediate/ \
 -i ./data/sample_ids.txt
 
-# Add noise to expression data
-Rscript ../R/add_noise.R \
+# Calculate normal scores for gene expression
+Rscript ../R/normal_score.R \
 -e ./intermediate/DAT.exp_quant.txt \
 -w ./intermediate/
 
 # Run HYENA for 0 to 5 PCs
 for i in {0..5}
   do
-	Rscript ../R/HYENA.R \
-	-e ./intermediate/DAT.exp.Rdata \
-	-s ./intermediate/DAT.sv_mapped_filtered_numSV.txt \
-	-i ./data/sample_ids.txt \
-	-a ../ref/toy_gene_annot_hg19_tsswindow.txt \
-	-p ./data/purity.txt \
-	-c ./data/cna.txt \
-	-m ./data/clindat.txt \
-	-d ./results/run_PC${i}/ \
-	-w ./intermediate/run_PC${i}/ \
-	--pur --cn -C 10 --age --sex -f 5 --PC -n ${i}
+  Rscript ../R/HYENA.R \
+  -e ./intermediate/DAT.exp.Rdata \
+  -s ./intermediate/DAT.sv_mapped_filtered_numSV.txt \
+  -i ./data/sample_ids.txt \
+  -a ../ref/toy_gene_annot_hg19_tsswindow.txt \
+  -p ./data/purity.txt \
+  -c ./data/cna.txt \
+  -m ./data/clindat.txt \
+  -d ./results/run_PC${i}/ \
+  -w ./intermediate/run_PC${i}/ \
+  --pur --cn -C 10 --age --sex -f 5 --PC -n ${i}
   done
 
 # Permute expression 5 times
 for j in {1..5}
   do
-	Rscript ../R/pmt_exp.R \
-	-e ./intermediate/DAT.exp.Rdata \
-	-w ./intermediate/exp_pmt/ \
-	-x PMT${j}
+  Rscript ../R/pmt_exp.R \
+  -e ./intermediate/DAT.exp.Rdata \
+  -w ./intermediate/exp_pmt/ \
+  -x PMT${j}
   done
 
 # Run HYENA on permuted expression
 for i in {0..5}
   do
-	for j in {1..5}
-		do
-		Rscript ../R/HYENA.R \
-		-e ./intermediate/exp_pmt/PMT${j}.exp.Rdata \
-		-s ./intermediate/DAT.sv_mapped_filtered_numSV.txt \
-		-i ./data/sample_ids.txt \
-		-a ../ref/toy_gene_annot_hg19_tsswindow.txt \
-		-p ./data/purity.txt \
-		-c ./data/cna.txt \
-		-m ./data/clindat.txt \
-		-d ./intermediate/run_PC${i}/ \
-		-w ./intermediate/run_PC${i}/ \
-		-x PMT${j} \
-		--pur --cn -C 10 --age --sex -f 5 --PC -n ${i} --pmt
-		done
+  for j in {1..5}
+    do
+    Rscript ../R/HYENA.R \
+    -e ./intermediate/exp_pmt/PMT${j}.exp.Rdata \
+    -s ./intermediate/DAT.sv_mapped_filtered_numSV.txt \
+    -i ./data/sample_ids.txt \
+    -a ../ref/toy_gene_annot_hg19_tsswindow.txt \
+    -p ./data/purity.txt \
+    -c ./data/cna.txt \
+    -m ./data/clindat.txt \
+    -d ./intermediate/run_PC${i}/ \
+    -w ./intermediate/run_PC${i}/ \
+    -x PMT${j} \
+    --pur --cn -C 10 --age --sex -f 5 --PC -n ${i} --pmt
+    done
   done
 
 # Compile permuted p-values
 ls -d intermediate/run_PC* | while read DIR
-	do
-	[ -e $DIR/pvalpmt.txt ] && rm $DIR/pvalpmt.txt
-	touch $DIR/pvalpmt.txt
-	tail -q -n +2 $DIR/*_posEstimate.txt >> $DIR/pvalpmt.txt
-	cp $DIR/pvalpmt.txt $DIR/temp.txt
-	cut -f17 $DIR/temp.txt > $DIR/pvalpmt.txt
-	rm $DIR/temp.txt
-	done
+  do
+  [ -e $DIR/pvalpmt.txt ] && rm $DIR/pvalpmt.txt
+  touch $DIR/pvalpmt.txt
+  tail -q -n +2 $DIR/*_posEstimate.txt >> $DIR/pvalpmt.txt
+  cp $DIR/pvalpmt.txt $DIR/temp.txt
+  cut -f17 $DIR/temp.txt > $DIR/pvalpmt.txt
+  rm $DIR/temp.txt
+  done
 
 # Calculate empirical p-values
 for i in {0..5}
   do
-	Rscript ../R/empiricalp.R \
-	-o ./results/run_PC${i}/*_posEstimate.txt \
-	-p ./intermediate/run_PC${i}/pvalpmt.txt \
-	-d ./results/run_PC${i}/
+  Rscript ../R/empiricalp.R \
+  -o ./results/run_PC${i}/*_posEstimate.txt \
+  -p ./intermediate/run_PC${i}/pvalpmt.txt \
+  -d ./results/run_PC${i}/
   done
 
 # Set the PC that reaches 80% power for the final results

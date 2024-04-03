@@ -37,36 +37,14 @@ rownames(dat.expression) <- dat.expression[,1]
 dat.expression <- dat.expression[,-1]
 class(dat.expression) <- "numeric"
 
-# remove genes that are 0 for all patients
+# remove genes that are 0 for all samples
 dat.expression <- dat.expression[rowSums(dat.expression[]) > 0 ,]
 
 if(opt$verbose) {
   print(dat.expression[1:5,1:5])
   }
 
-
-# add noise to the entire expression matrix
-print("Adding Gaussian noise...")
-dat.expression.noisy <- add.Gaussian.noise(as.matrix(dat.expression),
-                                           mean = 0.000000001,
-                                           stddev = 0.000000001,
-                                           symm = FALSE)
-dat.expression.noisy <- as.data.frame(dat.expression.noisy)
-
-if(opt$verbose) {
-  print(dat.expression.noisy[1:5,1:5])
-  }
-
-
-if (file.exists(opt$write)) {
- write.table(dat.expression.noisy, file = paste0(opt$write, opt$prefix, ".exp_quant_noisy.txt"), quote = FALSE, sep = "\t")
-} else {
- dir.create(opt$write)
- write.table(dat.expression.noisy, file = paste0(opt$write, opt$prefix, ".exp_quant_noisy.txt"), quote = FALSE, sep = "\t")
-}
-
-
-fpkm.qn <- dat.expression.noisy
+fpkm.qn <- as.data.frame(dat.expression)
 
 # transpose the expression matrix so that the variables (genes) are in columns
 fpkm.qn.t <- t(fpkm.qn)
@@ -78,7 +56,7 @@ if(opt$verbose){
 # prepare RLE values
 fpkm.qn.log <- log(fpkm.qn + 1)
 fpkm.qn.log <- as.matrix(fpkm.qn.log)
-features_meds <- rowMedians(fpkm.qn.log)
+features_meds <- rowMedians(fpkm.qn.log, useNames=F)
 med_devs <- fpkm.qn.log - features_meds
 med_devs <- t(med_devs) # necessary for downstream analysis (plotting)
 

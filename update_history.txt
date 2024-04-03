@@ -1,3 +1,13 @@
+v.0.5.4
+2024.03.25
+Stable version.
+
+Removed add noise function in add_noise.R and renamed it to normal_score.R. 
+The results are more stable with less false positives.
+Revised example.sh file, changed blank charaters to spaces. It used to be a 
+mixture of tabs and spaces, may cause problem when copy and paste to command
+line.
+
 v.0.5.3
 2022.05.18
 Stable version.
